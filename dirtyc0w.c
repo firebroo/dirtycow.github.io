@@ -149,5 +149,6 @@ You have to wait for the threads to finish.
 */
   pthread_join(pth1,NULL);
   pthread_join(pth2,NULL);
+  free(writen);
   return 0;
 }
