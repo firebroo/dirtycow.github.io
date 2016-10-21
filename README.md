@@ -10,6 +10,7 @@ sh test.sh
     madvise success
     procself mem success
 
+ps: 这里执行要求输入root密码是为了创建一个当前用户不具备写入权限的文件
 # Dirty COW
 
 Hello
