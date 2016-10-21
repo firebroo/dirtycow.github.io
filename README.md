@@ -7,7 +7,6 @@ sh test.sh
 
 成功的会在终端显示黄色的
 
-    madvise success
     procself mem success
 
 ps: 这里执行要求输入root密码是为了创建一个当前用户不具备写入权限的文件

