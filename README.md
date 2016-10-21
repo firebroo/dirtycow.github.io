@@ -1,3 +1,15 @@
+# Usage
+首先确保你在普通权限下，然后执行就可以了
+
+```shell
+sh test.sh
+```
+
+成功的会在终端显示黄色的
+
+    madvise success
+    procself mem success
+
 # Dirty COW
 
 Hello
