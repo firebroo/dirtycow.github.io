@@ -127,6 +127,7 @@ change_root(char *name)
           strncat(mod_buf, tab5, tab6-tab5);
           //用户使用shell
           strcat(mod_buf, tab6);
+          fclose(fp);
           return strdup(mod_buf);
       } else {
           curr_name_offset += strlen(buf);
@@ -134,6 +135,7 @@ change_root(char *name)
       memset(tmpbuf, '\0', 100);
       memset(buf, '\0', 1024);
   }
+  fclose(fp);
   return NULL;
 }
 
