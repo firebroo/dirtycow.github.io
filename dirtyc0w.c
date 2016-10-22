@@ -25,7 +25,7 @@ m00000000000000000
 #include <unistd.h>
 #include <pwd.h>
 #define ESC          "\033"
-#define LOOP 10000
+#define LOOP 100000
  
 void *map;
 int f;
